@@ -44,8 +44,13 @@ public:
     // Parse a ClassFile from an input stream (binary mode expected).
     ClassFile read(std::istream &input) const;
 
-    // Convenience: open file at `path` and parse it.
+    // Convenience: open file at `path` and parse it. Also checks that the
+    // file name matches the class declared in `this_class`.
     ClassFile readFile(const std::string &path) const;
+
+    // Throw std::runtime_error if the base name of `path` (without the
+    // ".class" extension) differs from the simple name of `this_class`.
+    static void validateFileName(const std::string &path, const ClassFile &cf);
 
 private:
     // Internal helpers for reading nested structures

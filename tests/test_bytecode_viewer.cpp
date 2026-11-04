@@ -2,7 +2,10 @@
 #include "bytecode_viewer/BytecodeDecoder.hpp"
 
 #include <cassert>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 // Lê o arquivo soma_certo.class (exemplo simples com um método com código)
@@ -102,12 +105,43 @@ void test_bytecode_decoder() {
     std::cout << "[PASS] test_bytecode_decoder\n";
 }
 
+// Verifica que o nome do arquivo deve corresponder ao nome da classe
+void test_file_name_validation() {
+    ClassReader reader;
+
+    // Arquivo com nome correto: não deve lançar exceção
+    ClassFile cf = reader.readFile("../exemplos/Somar.class");
+    assert(cf.thisClassName() == "Somar");
+
+    // Copia Somar.class para um arquivo com outro nome
+    const char *wrong_path = "NomeErrado.class";
+    {
+        std::ifstream src("../exemplos/Somar.class", std::ios::binary);
+        std::ofstream dst(wrong_path, std::ios::binary);
+        dst << src.rdbuf();
+    }
+
+    bool threw = false;
+    try {
+        reader.readFile(wrong_path);
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    std::remove(wrong_path);
+    assert(threw && "nome de arquivo diferente da classe deve lançar exceção");
+
+    // Validação direta: aceita caminhos com separador do Windows
+    ClassReader::validateFileName("C:\\dir\\Somar.class", cf);
+    std::cout << "[PASS] test_file_name_validation\n";
+}
+
 int main() {
     test_sanity();
     test_code_attribute_parsed();
     test_multiple_methods_with_code();
     test_exception_table_parsed();
     test_bytecode_decoder();
+    test_file_name_validation();
 
     std::cout << "\nTodos os testes passaram.\n";
     return 0;

@@ -203,7 +203,40 @@ ClassFile ClassReader::readFile(const std::string &path) const {
     if (!input) {
         throw std::runtime_error("unable to open class file: " + path);
     }
-    return read(input);
+    ClassFile cf = read(input);
+    validateFileName(path, cf);
+    return cf;
+}
+
+// Verifica se o nome do arquivo corresponde à classe declarada em this_class.
+// Ex: "exemplos/Somar.class" deve conter a classe "Somar" (ou "pacote/Somar").
+// Classes aninhadas usam o nome binário completo (ex: "Externa$Interna.class").
+void ClassReader::validateFileName(const std::string &path, const ClassFile &cf) {
+    // Remove o diretório (aceita '/' e '\\' para funcionar no Windows)
+    std::string file_name = path;
+    std::size_t slash_pos = file_name.find_last_of("/\\");
+    if (slash_pos != std::string::npos) {
+        file_name = file_name.substr(slash_pos + 1);
+    }
+
+    // Remove a extensão ".class"
+    const std::string extension = ".class";
+    if (file_name.size() >= extension.size() &&
+        file_name.compare(file_name.size() - extension.size(), extension.size(), extension) == 0) {
+        file_name = file_name.substr(0, file_name.size() - extension.size());
+    }
+
+    // O nome interno usa '/' como separador de pacote (ex: "java/lang/Object")
+    std::string class_name = cf.thisClassName();
+    std::size_t package_pos = class_name.find_last_of('/');
+    if (package_pos != std::string::npos) {
+        class_name = class_name.substr(package_pos + 1);
+    }
+
+    if (file_name != class_name) {
+        throw std::runtime_error("class file name '" + file_name +
+                                 ".class' does not match class name '" + cf.thisClassName() + "'");
+    }
 }
 
 std::string ClassFile::thisClassName() const {
