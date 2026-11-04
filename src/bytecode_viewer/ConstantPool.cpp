@@ -1,7 +1,8 @@
 // Final implementation for Issue #2 - Constant Pool Resolution
 #include "bytecode_viewer/ConstantPool.hpp"
-#include <utility>
+
 #include <stdexcept>
+#include <utility>
 
 ConstantPool::ConstantPool()
     : entries_(1) {}
@@ -28,7 +29,7 @@ const CpInfo &ConstantPool::at(u2 index) const {
     return entries_.at(index);
 }
 
-// 1. Resolve uma string UTF-8 direta
+// Resolve uma string UTF-8 direta da constant pool.
 std::string ConstantPool::utf8(u2 index) const {
     const CpInfo &entry = at(index);
     if (entry.tag != 1) { // 1 = CONSTANT_Utf8
@@ -37,7 +38,7 @@ std::string ConstantPool::utf8(u2 index) const {
     return entry.utf8_value;
 }
 
-// 2. CONSTANT_Class aponta para um Utf8 que contém o nome da classe
+// CONSTANT_Class aponta para uma entrada Utf8 com o nome da classe.
 std::string ConstantPool::className(u2 index) const {
     const CpInfo &entry = at(index);
     if (entry.tag != 7) { // 7 = CONSTANT_Class
@@ -46,7 +47,7 @@ std::string ConstantPool::className(u2 index) const {
     return utf8(entry.index1);
 }
 
-// 3. NameAndType une o nome com o descritor (tipo de retorno/argumentos) separado por dois pontos
+// NameAndType combina nome e descritor em um formato `nome:descritor`.
 std::string ConstantPool::nameAndType(u2 index) const {
     const CpInfo &entry = at(index);
     if (entry.tag != 12) { // 12 = CONSTANT_NameAndType
@@ -55,19 +56,26 @@ std::string ConstantPool::nameAndType(u2 index) const {
     return utf8(entry.index1) + ":" + utf8(entry.index2);
 }
 
-// 4. Método genérico de formatação textual de constantes para exibição em tela
+// Formata uma entrada da constant pool para visualização amigável.
 std::string ConstantPool::toString(u2 index) const {
-    if (index == 0 || index >= entries_.size()) return "null";
+    if (index == 0 || index >= entries_.size()) {
+        return "null";
+    }
+
     const CpInfo &entry = entries_.at(index);
 
     switch (entry.tag) {
         case 1:  return "Utf8               \"" + entry.utf8_value + "\"";
         case 7:  return "Class              #" + std::to_string(entry.index1) + " // " + className(index);
         case 8:  return "String             #" + std::to_string(entry.index1) + " // " + utf8(entry.index1);
-        case 9:  return "Fieldref           #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2) + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
-        case 10: return "Methodref          #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2) + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
-        case 11: return "InterfaceMethodref #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2) + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
-        case 12: return "NameAndType        #" + std::to_string(entry.index1) + ":#" + std::to_string(entry.index2) + " // " + nameAndType(index);
+        case 9:  return "Fieldref           #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2)
+            + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
+        case 10: return "Methodref          #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2)
+            + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
+        case 11: return "InterfaceMethodref #" + std::to_string(entry.index1) + ".#" + std::to_string(entry.index2)
+            + " // " + className(entry.index1) + "." + nameAndType(entry.index2);
+        case 12: return "NameAndType        #" + std::to_string(entry.index1) + ":#" + std::to_string(entry.index2)
+            + " // " + nameAndType(index);
         case 3:  return "Integer";
         case 4:  return "Float";
         case 5:  return "Long";

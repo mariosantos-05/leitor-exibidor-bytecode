@@ -7,41 +7,43 @@
 
 /*
  * ConstantPool.hpp
- * The constant pool is the class file's symbol table. It stores literals,
- * type names, method and field references, and other values used by the
- * JVM. Each entry has a `tag` identifying its type (e.g., CONSTANT_Utf8=1,
- * CONSTANT_Class=7).
+ * Define a tabela de constantes do arquivo .class.
+ *
+ * A JVM armazena nomes, tipos, referências de campos e métodos e outros dados
+ * em uma estrutura chamada constant pool. Cada entrada possui uma tag que indica
+ * seu tipo, e esta classe facilita a leitura e a conversão dessas entradas para
+ * texto legível.
  */
 
-// A single constant pool entry. Fields are generic and only some are used
-// depending on the `tag` value.
+// Uma entrada individual da constant pool.
+// Dependendo da tag, alguns campos são usados e outros permanecem vazios.
 struct CpInfo {
-    u1 tag;                // entry type tag (see JVM Spec constant tags)
-    std::string utf8_value; // used when tag == CONSTANT_Utf8
-    u2 index1;             // operand index (meaning depends on tag)
-    u2 index2;             // second operand index (if needed)
-    std::vector<u1> bytes; // raw bytes for some constant types
+    u1 tag;
+    std::string utf8_value;
+    u2 index1;
+    u2 index2;
+    std::vector<u1> bytes;
 
     CpInfo()
         : tag(0), index1(0), index2(0) {}
 };
 
-// A small helper class to query the constant pool. The implementation
-// provides convenience methods to resolve common patterns (utf8, class
-// names, name-and-type pairs) and to pretty-print entries for debugging.
+// Facilita a consulta e a resolução de entradas da constant pool.
+// A implementação fornece acesso direto, conversões úteis e formatação textual
+// para depuração e apresentação do conteúdo do .class.
 class ConstantPool {
 public:
     ConstantPool();
     explicit ConstantPool(std::vector<CpInfo> entries);
 
-    // Number of entries in the pool
+    // Quantidade de entradas válidas da constant pool (sem contar o índice 0).
     std::size_t size() const;
     bool empty() const;
 
-    // Access raw CpInfo at 1-based constant pool index (per JVM spec)
+    // Acesso direto a uma entrada usando índice 1-based, conforme a JVM.
     const CpInfo &at(u2 index) const;
 
-    // Helpers to resolve common constant pool contents
+    // Helpers para interpretar entradas comuns da constant pool.
     std::string utf8(u2 index) const;
     std::string className(u2 index) const;
     std::string nameAndType(u2 index) const;

@@ -9,22 +9,24 @@
 
 /*
  * ClassReader.hpp
- * High-level parser for a JVM ClassFile. It reads the binary class file
- * format (see JVM Spec §4.1) and populates the `ClassFile` struct defined
- * in ClassStructures.hpp.
+ * Parser principal do formato ClassFile da JVM.
+ *
+ * Este componente lê o arquivo .class em binário e monta a estrutura `ClassFile`
+ * em memória. Ele percorre a ordem correta da especificação da JVM e resolve
+ * os elementos relevantes como constant pool, campos, métodos e atributos.
  */
 
-// Representation of a parsed class file. Fields correspond to entries in
-// the ClassFile structure from the JVM Specification.
+// Representação final de um arquivo .class já lido.
+// Os campos correspondem aos blocos principais da estrutura oficial do ClassFile.
 struct ClassFile {
-    u4 magic;                   // should be 0xCAFEBABE
-    u2 minor_version;           // class file minor version
-    u2 major_version;           // class file major version
-    ConstantPool constant_pool; // constant pool (symbol table)
-    u2 access_flags;            // class modifiers (public, final, etc.)
-    u2 this_class;              // constant pool index of this class
-    u2 super_class;             // constant pool index of super class
-    std::vector<u2> interfaces; // list of implemented interfaces (cp indices)
+    u4 magic;
+    u2 minor_version;
+    u2 major_version;
+    ConstantPool constant_pool;
+    u2 access_flags;
+    u2 this_class;
+    u2 super_class;
+    std::vector<u2> interfaces;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;
     std::vector<AttributeInfo> attributes;
@@ -32,23 +34,23 @@ struct ClassFile {
     ClassFile()
         : magic(0), minor_version(0), major_version(0), access_flags(0), this_class(0), super_class(0) {}
 
-    // Helper methods to get human-readable class names
+    // Funções auxiliares para obter nomes legíveis da classe atual e da superclasse.
     std::string thisClassName() const;
     std::string superClassName() const;
 };
 
-// ClassReader: provides methods to read a ClassFile from a stream or file
-// path. Implementations throw std::runtime_error on parse errors.
+// Classe responsável por ler ClassFile a partir de um fluxo ou de um arquivo.
+// Erros de leitura ou de parsing geram exceções std::runtime_error.
 class ClassReader {
 public:
-    // Parse a ClassFile from an input stream (binary mode expected).
+    // Lê um arquivo .class a partir de um fluxo binário.
     ClassFile read(std::istream &input) const;
 
-    // Convenience: open file at `path` and parse it.
+    // Abre um caminho em disco e faz a leitura do arquivo.
     ClassFile readFile(const std::string &path) const;
 
 private:
-    // Internal helpers for reading nested structures
+    // Helpers internos usados para extrair atributos aninhados e Code.
     static AttributeInfo readAttribute(std::istream &input);
     static CodeAttribute readCodeAttribute(std::istream &input);
 };

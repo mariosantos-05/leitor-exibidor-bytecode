@@ -9,24 +9,24 @@
 
 /*
  * Common.hpp
- * Small utilities for reading JVM class file binary data.
+ * Utilitários básicos para leitura de arquivos .class em formato binário.
  *
- * The JVM class file format uses big-endian encoding and fixed-size
- * integer types. We provide lightweight aliases and helper functions
- * so the rest of the code can read the binary format clearly.
+ * O formato JVM usa encoding big-endian e tipos fixos de tamanho. Este arquivo
+ * centraliza aliases e funções de leitura para que o restante do projeto possa
+ * operar sobre o bytecode com uma API simples e legível.
  *
- * Types:
- *  - u1: unsigned 8-bit value (Java "byte")
- *  - u2: unsigned 16-bit value (Java "unsigned short" concept)
- *  - u4: unsigned 32-bit value (Java "unsigned int" concept)
+ * Tipos principais:
+ *  - u1: 8 bits sem sinal (equivalente a byte em Java)
+ *  - u2: 16 bits sem sinal
+ *  - u4: 32 bits sem sinal
  */
 
 using u1 = std::uint8_t;
 using u2 = std::uint16_t;
 using u4 = std::uint32_t;
 
-// Read one unsigned byte (u1) from the stream.
-// Throws std::runtime_error if the stream ends unexpectedly.
+// Lê 1 byte sem sinal do fluxo de entrada.
+// Lança std::runtime_error em caso de fim inesperado do arquivo.
 inline u1 readU1(std::istream &input) {
     char value = 0;
     if (!input.get(value)) {
@@ -35,20 +35,19 @@ inline u1 readU1(std::istream &input) {
     return static_cast<u1>(static_cast<unsigned char>(value));
 }
 
-// Read two bytes (big-endian) and return as u2.
+// Lê 2 bytes em ordem big-endian e devolve como u2.
 inline u2 readU2(std::istream &input) {
     return static_cast<u2>((static_cast<u2>(readU1(input)) << 8) |
                            static_cast<u2>(readU1(input)));
 }
 
-// Read four bytes (big-endian) and return as u4.
+// Lê 4 bytes em ordem big-endian e devolve como u4.
 inline u4 readU4(std::istream &input) {
     return static_cast<u4>((static_cast<u4>(readU2(input)) << 16) |
                            static_cast<u4>(readU2(input)));
 }
 
-// Read a raw byte array of length `count` from the stream.
-// Returns a vector<u1> filled with the bytes.
+// Lê `count` bytes brutos do fluxo e devolve um vetor de u1.
 inline std::vector<u1> readBytes(std::istream &input, std::size_t count) {
     std::vector<u1> bytes(count);
     if (count == 0) {
@@ -64,8 +63,8 @@ inline std::vector<u1> readBytes(std::istream &input, std::size_t count) {
     return bytes;
 }
 
-// Convert a sequence of raw bytes to a std::string (useful for UTF-8 data
-// stored in the constant pool).
+// Converte bytes crus em std::string para representar textos UTF-8 presentes
+// na constant pool e em outros trechos do arquivo de classe.
 inline std::string bytesToString(const std::vector<u1> &bytes) {
     return std::string(bytes.begin(), bytes.end());
 }

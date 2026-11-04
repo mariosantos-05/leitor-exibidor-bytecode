@@ -1,3 +1,9 @@
+/*
+ * main.cpp
+ * Aplicação CLI para ler um arquivo .class e exibir informações do ClassFile,
+ * do pool de constantes e do bytecode decodificado.
+ */
+
 #include "bytecode_viewer/BytecodeDecoder.hpp"
 #include "bytecode_viewer/ClassReader.hpp"
 
@@ -9,7 +15,7 @@
 
 namespace {
 
-std::string javaVersionLabel(u2 major_version) {
+std::string describeJavaVersion(u2 major_version) {
     static const std::pair<u2, const char *> kVersionMap[] = {
         {45, "1.1"}, {46, "1.2"}, {47, "1.3"}, {48, "1.4"}, {49, "5.0"},
         {50, "6"},   {51, "7"},   {52, "8"},   {53, "9"},   {54, "10"},
@@ -25,30 +31,30 @@ std::string javaVersionLabel(u2 major_version) {
     return "[" + std::to_string(major_version) + "]";
 }
 
-std::string accessFlagsLabel(u2 flags) {
+std::string describeAccessFlags(u2 flags) {
     static const std::pair<u2, const char *> kFlagMap[] = {
         {0x0001, "public"},     {0x0010, "final"},      {0x0020, "super"},
         {0x0200, "interface"},  {0x0400, "abstract"},   {0x1000, "synthetic"},
         {0x2000, "annotation"}, {0x4000, "enum"},
     };
-    std::ostringstream out;
-    out << "0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << flags << std::dec << std::setfill(' ');
-    out << " [";
-    bool first = true;
+    std::ostringstream output;
+    output << "0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << flags << std::dec << std::setfill(' ');
+    output << " [";
+    bool is_first = true;
     for (const auto &entry : kFlagMap) {
         if (flags & entry.first) {
-            if (!first) out << ", ";
-            out << entry.second;
-            first = false;
+            if (!is_first) output << ", ";
+            output << entry.second;
+            is_first = false;
         }
     }
-    out << "]";
-    return out.str();
+    output << "]";
+    return output.str();
 }
 
-// Resolve operands that reference the constant pool (e.g. "#12") into a
-// human-friendly string using ConstantPool::toString.
-std::string resolveConstantOperand(const std::string &operand_text, const ConstantPool &constant_pool) {
+// Resolve operandos que apontam para a constant pool, como "#12",
+// para uma representação mais amigável em tela.
+std::string resolveConstantOperandText(const std::string &operand_text, const ConstantPool &constant_pool) {
     if (operand_text.empty() || operand_text[0] != '#') {
         return operand_text;
     }
@@ -70,22 +76,18 @@ std::string resolveConstantOperand(const std::string &operand_text, const Consta
     }
 
     std::string resolved = constant_pool.toString(static_cast<u2>(index));
-    
-    // Extrai a parte resolvida após "// " para formatar como < >
-    std::size_t comment_pos = resolved.find("// ");
-    if (comment_pos != std::string::npos) {
-        resolved = resolved.substr(comment_pos + 3);
-        // jclasslib adiciona espaços ao redor do ':' no NameAndType, mas vamos
-        // manter a extração simples ou fazer um pequeno replace
-        std::size_t colon_pos = resolved.find(":");
-        if (colon_pos != std::string::npos && colon_pos > 0 && resolved[colon_pos - 1] != ' ') {
-            resolved = resolved.substr(0, colon_pos) + " : " + resolved.substr(colon_pos + 1);
+
+    std::size_t comment_position = resolved.find("// ");
+    if (comment_position != std::string::npos) {
+        resolved = resolved.substr(comment_position + 3);
+        std::size_t colon_position = resolved.find(":");
+        if (colon_position != std::string::npos && colon_position > 0 && resolved[colon_position - 1] != ' ') {
+            resolved = resolved.substr(0, colon_position) + " : " + resolved.substr(colon_position + 1);
         }
     } else if (resolved.find("Utf8") != std::string::npos) {
-        // Se for string direta, pega o que está entre aspas
-        std::size_t quote_pos = resolved.find("\"");
-        if (quote_pos != std::string::npos) {
-            resolved = resolved.substr(quote_pos + 1);
+        std::size_t quote_position = resolved.find("\"");
+        if (quote_position != std::string::npos) {
+            resolved = resolved.substr(quote_position + 1);
             if (!resolved.empty() && resolved.back() == '"') {
                 resolved.pop_back();
             }
@@ -95,7 +97,7 @@ std::string resolveConstantOperand(const std::string &operand_text, const Consta
     return std::string(" #") + operand_text.substr(1, cursor - 1) + " <" + resolved + ">" + operand_text.substr(cursor);
 }
 
-void printGeneralInfo(const ClassFile &class_file) {
+void printClassFileOverview(const ClassFile &class_file) {
     constexpr int kLabelWidth = 25;
     std::cout << "General Information:\n";
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Magic:"
@@ -103,19 +105,19 @@ void printGeneralInfo(const ClassFile &class_file) {
               << class_file.magic << std::dec << std::setfill(' ') << '\n';
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Minor version:" << class_file.minor_version << '\n';
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Major version:"
-              << class_file.major_version << " " << javaVersionLabel(class_file.major_version) << '\n';
+              << class_file.major_version << " " << describeJavaVersion(class_file.major_version) << '\n';
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Constant pool count:" << class_file.constant_pool.size() << '\n';
-    std::cout << "  " << std::left << std::setw(kLabelWidth) << "Access flags:" << accessFlagsLabel(class_file.access_flags) << '\n';
+    std::cout << "  " << std::left << std::setw(kLabelWidth) << "Access flags:" << describeAccessFlags(class_file.access_flags) << '\n';
 
-    std::string this_class_str = "cp_info #" + std::to_string(class_file.this_class)
+    std::string this_class_text = "cp_info #" + std::to_string(class_file.this_class)
                                  + " <" + class_file.thisClassName() + ">";
-    std::cout << "  " << std::left << std::setw(kLabelWidth) << "This class:" << this_class_str << '\n';
+    std::cout << "  " << std::left << std::setw(kLabelWidth) << "This class:" << this_class_text << '\n';
 
-    std::string super_class_str = "cp_info #" + std::to_string(class_file.super_class);
+    std::string super_class_text = "cp_info #" + std::to_string(class_file.super_class);
     if (class_file.super_class != 0) {
-        super_class_str += " <" + class_file.superClassName() + ">";
+        super_class_text += " <" + class_file.superClassName() + ">";
     }
-    std::cout << "  " << std::left << std::setw(kLabelWidth) << "Super class:" << super_class_str << '\n';
+    std::cout << "  " << std::left << std::setw(kLabelWidth) << "Super class:" << super_class_text << '\n';
 
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Interfaces count:" << class_file.interfaces.size() << '\n';
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Fields count:" << class_file.fields.size() << '\n';
@@ -123,8 +125,8 @@ void printGeneralInfo(const ClassFile &class_file) {
     std::cout << "  " << std::left << std::setw(kLabelWidth) << "Attributes count:" << class_file.attributes.size() << '\n';
 }
 
-void printClassFile(const ClassFile &class_file) {
-    printGeneralInfo(class_file);
+void printDetailedClassFile(const ClassFile &class_file) {
+    printClassFileOverview(class_file);
 
     std::cout << "\nConstant Pool:\n";
     for (u2 index = 1; index <= class_file.constant_pool.size(); ++index) {
@@ -142,11 +144,11 @@ void printClassFile(const ClassFile &class_file) {
                 std::cout << std::right << std::setw(4) << instruction.pc << " "
                           << std::left << std::setw(15) << instruction.mnemonic;
                 if (!instruction.operand_text.empty()) {
-                    std::string op_text = instruction.operand_text;
-                    if (op_text[0] == '#') {
-                        std::cout << resolveConstantOperand(op_text, class_file.constant_pool);
+                    std::string operand_text = instruction.operand_text;
+                    if (operand_text[0] == '#') {
+                        std::cout << resolveConstantOperandText(operand_text, class_file.constant_pool);
                     } else {
-                        std::cout << " " << op_text;
+                        std::cout << " " << operand_text;
                     }
                 }
                 std::cout << '\n';
@@ -167,7 +169,7 @@ int main(int argc, char **argv) {
     try {
         ClassReader reader;
         const ClassFile class_file = reader.readFile(argv[1]);
-        printClassFile(class_file);
+        printDetailedClassFile(class_file);
     } catch (const std::exception &error) {
         std::cerr << "Error: " << error.what() << '\n';
         return 1;

@@ -7,27 +7,28 @@
 
 /*
  * BytecodeDecoder.hpp
- * Small utility to convert raw JVM bytecode (a sequence of opcodes) into
- * a human-readable list of instructions. This is intentionally simple: it
- * maps opcodes to mnemonics and formats operands as text for display.
+ * Decodificação de instruções JVM para leitura humana do bytecode.
+ *
+ * Este componente recebe um vetor de bytes correspondente ao atributo Code de
+ * um método e transforma cada opcode em uma instrução legível, com mnemonic,
+ * operandos e posição do programa (pc).
  */
 
-// A single decoded instruction with program-counter, opcode, mnemonic and
-// textual operand representation. Useful for printing or simple analysis.
+// Representa uma instrução já decodificada.
+// O `pc` indica a posição inicial no array de instruções e `length` indica
+// quantos bytes a instrução ocupa na sequência do bytecode.
 struct Instruction {
-    std::size_t pc;         // byte offset inside the code array
-    u1 opcode;              // raw opcode value
-    std::string mnemonic;   // human-readable opcode name (e.g., "aload_0")
-    std::string operand_text;// textual representation of operands (if any)
-    std::size_t length;     // length in bytes of this instruction
+    std::size_t pc;
+    u1 opcode;
+    std::string mnemonic;
+    std::string operand_text;
+    std::size_t length;
 
     Instruction()
         : pc(0), opcode(0), length(0) {}
 };
 
-// BytecodeDecoder: high-level decoder that turns a byte vector into
-// a list of `Instruction`. The implementation uses simple tables to
-// resolve mnemonics and operand sizes.
+// Decodifica bytecode JVM em uma lista de instruções facilmente exibíveis.
 class BytecodeDecoder {
 public:
     std::string mnemonic(u1 opcode) const;

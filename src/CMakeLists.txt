@@ -10,7 +10,7 @@ target_include_directories(bytecode_viewer PUBLIC
 )
 
 add_executable(bytecode_viewer_cli
-  main.cpp
+  cli/main.cpp
 )
 target_link_libraries(bytecode_viewer_cli PRIVATE bytecode_viewer)
 
