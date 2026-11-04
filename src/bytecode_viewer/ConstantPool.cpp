@@ -1,4 +1,3 @@
-// Final implementation for Issue #2 - Constant Pool Resolution
 #include "bytecode_viewer/ConstantPool.hpp"
 
 #include <stdexcept>
